@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Long line</title>
+</head>
+
+<style>
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+</style>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        function setupCanvas(canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.style.width = window.innerWidth + "px";
+            canvas.style.height = window.innerHeight + "px";
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            return ctx;
+        }
+
+        const canvas = document.getElementById('canvas');
+        const ctx = setupCanvas(canvas);
+
+        const color = {
+            h: 0,
+            s: 90,
+            l: 50,
+            getCurrentColor: function () {
+                return `hsl(${this.h}deg, ${this.s}%, ${this.l}%)`;
+            },
+            getNewColor: function () {
+                this.h += 1;
+                return `hsl(${this.h}deg, ${this.s}%, ${this.l}%)`;
+            }
+        }
+
+        ctx.font = "22px Verdana";
+        ctx.strokeStyle = color.getCurrentColor();
+        ctx.lineWidth = "2";
+
+        let raf;
+
+        const startX = 100;
+        const startY = 100;
+        const startAngle = Math.floor(Math.random() * Math.PI * 2 * 100) / 100;
+        const startSpeed = 800;
+        const maxHeight = window.innerHeight;
+        const maxWidth = window.innerWidth;
+
+        const position = {
+            speed: startSpeed,
+            x: startX,
+            y: startY,
+            dx: Math.round(startSpeed * Math.sin(startAngle)),
+            dy: Math.round(startSpeed * Math.cos(startAngle)),
+        };
+
+        function drawSimpleLine(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.strokeStyle = color.getNewColor();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function drawFromTo(x1, y1, x2, y2) {
+            let deltaX, deltaY, targetX, targetY;
+
+            if (y2 > maxHeight) {
+                deltaY = maxHeight;
+                deltaX = (deltaY - y1) * (x2 - x1) / (y2 - y1) + x1;
+                targetY = 2 * maxHeight - y2;
+                targetX = x2;
+            }
+
+            if (y2 < 0) {
+                deltaY = 0;
+                deltaX = (deltaY - y1) * (x2 - x1) / (y2 - y1) + x1;
+                targetY = 0 - y2;
+                targetX = x2;
+            }
+
+            if (x2 < 0) {
+                if (deltaX === undefined || deltaX < 0) {
+                    deltaX = 0;
+                    deltaY = (deltaX - x1) * (y2 - y1) / (x2 - x1) + y1;
+                    targetX = 0 - x2;
+                    targetY = y2;
+                }
+            }
+
+            if (x2 > maxWidth) {
+                if (deltaX === undefined || deltaX > maxWidth) {
+                    deltaX = maxWidth;
+                    deltaY = (deltaX - x1) * (y2 - y1) / (x2 - x1) + y1;
+                    targetX = 2 * maxWidth - x2;
+                    targetY = y2;
+                }
+            }
+
+            if (deltaX !== undefined && deltaY !== undefined) {
+                deltaX = Math.round(deltaX);
+                deltaY = Math.round(deltaY);
+
+                drawSimpleLine(x1, y1, deltaX, deltaY);
+
+                return drawFromTo(deltaX, deltaY, targetX, targetY);
+            }
+
+            drawSimpleLine(x1, y1, x2, y2)
+
+            return [x2, y2];
+        }
+
+        function draw() {
+
+            const targetX = position.x + position.dx;
+            const targetY = position.y + position.dy;
+
+            if (targetY > maxHeight || targetY < 0) {
+                position.dy *= -1;
+            }
+
+            if (targetX > maxWidth || targetX < 0) {
+                position.dx *= -1;
+            }
+
+            [position.x, position.y] = drawFromTo(position.x, position.y, targetX, targetY);
+
+            raf = window.requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', function (e) {
+            if (raf === undefined) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                position.x = Math.round(e.clientX);
+                position.y = Math.round(e.clientY);
+            }
+
+            if (!raf) {
+                raf = window.requestAnimationFrame(draw);
+            } else {
+                window.cancelAnimationFrame(raf);
+                raf = null;
+            }
+        });
+
+        ctx.fillText("Click me soon!", 50, 60);
+    </script>
+</body>
+
+</html>
